@@ -1,6 +1,4 @@
-package ru.geekbrains.netchat;
-
-import javafx.stage.Screen;
+package ru.geekbrains.gui;
 
 import javax.swing.*;
 import java.awt.*;
@@ -8,14 +6,16 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.DateFormat;
+import java.io.*;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class ClientGUI extends JFrame implements ActionListener, Thread.UncaughtExceptionHandler, KeyListener {
+import ru.geekbrains.network.*;
+
+public class ClientGUI extends JFrame implements ActionListener, Thread.UncaughtExceptionHandler, MessageSocketThreadListener {
 
     private static final int WIDTH = 400;
     private static final int HEIGHT = 300;
@@ -25,7 +25,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     private final JTextArea chatArea = new JTextArea();
     private final JPanel panelTop = new JPanel(new GridLayout(2, 3));
     private final JTextField ipAddressField = new JTextField("127.0.0.1");
-    private final JTextField portField = new JTextField("8181");
+    private final JTextField portField = new JTextField("8080");
     private final JCheckBox cbAlwaysOnTop = new JCheckBox("Always on top", true);
     private final JTextField loginField = new JTextField("login");
     private final JPasswordField passwordField = new JPasswordField("123");
@@ -38,8 +38,10 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
 
     private final JList<String> listUsers = new JList<String>();
 
+    private MessageSocketThread messageSocketThread;
 
-    public static void main(String[] args){
+
+    public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -85,33 +87,37 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
 
         cbAlwaysOnTop.addActionListener(this);
         buttonSend.addActionListener(this);
-        messageField.addKeyListener(this);
+        messageField.addActionListener(this);
+        buttonLogin.addActionListener(this);
+        buttonDisconnect.addActionListener(this);
+        panelBottom.setVisible(false);
+        panelTop.setVisible(true);
 
         setVisible(true);
     }
 
-    private void sendMessage() {
-        String name = loginField.getText();
-        String message = messageField.getText();
-        if (!message.equals("")) {
-            SimpleDateFormat dateFormat=new SimpleDateFormat("dd.MM.yyyy H:m:s:S");
-            String newRecord = String.format("[%s] %s: %s\n", dateFormat.format(new Date()), name, message);
-            chatArea.setText(chatArea.getText() + String.format("%s: %s\n", name, message));
+    private void sendMessage(String name, String message) {
+        if (!message.isEmpty()) {
+            putMessage(name, message);
             messageField.setText("");
-            try(FileOutputStream fos=new FileOutputStream("messages.log",true))
-            {
-                // перевод строки в байты
-                byte[] buffer = newRecord.getBytes();
-
-                fos.write(buffer, 0, buffer.length);
-            }
-            catch(IOException ex){
-
-                System.out.println(ex.getMessage());
-            }
-
+            messageField.grabFocus();
+            messageSocketThread.sendMessage(message);
         }
+    }
 
+    private void putMessage(String name, String message) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy H:m:s");
+        String messageFormatted = String.format("[%s] %s: %s\n", dateFormat.format(new Date()), name, message);
+        chatArea.append(messageFormatted);
+        writeLog(messageFormatted);
+    }
+
+    private void writeLog(String message) {
+        try (PrintWriter pw = new PrintWriter(new FileOutputStream("messages.log", true))) {
+            pw.print(message);
+        } catch (FileNotFoundException e) {
+            showError(message);
+        }
     }
 
     @Override
@@ -119,8 +125,27 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         Object src = e.getSource();
         if (src == cbAlwaysOnTop) {
             setAlwaysOnTop(cbAlwaysOnTop.isSelected());
-        } else if (src == buttonSend) {
-            sendMessage();
+        } else if (src == buttonSend || src == messageField) {
+            sendMessage(loginField.getText(), messageField.getText());
+        } else if (src == buttonLogin) {
+            try {
+                Socket socket = new Socket(ipAddressField.getText(), Integer.parseInt(portField.getText()));
+                panelTop.setVisible(false);
+                panelBottom.setVisible(true);
+                messageSocketThread = new MessageSocketThread(this, loginField.getText(), socket);
+            } catch (UnknownHostException unknownHostException) {
+                showError(unknownHostException.getMessage());
+            } catch (IOException ioException) {
+                showError(ioException.getMessage());
+            }
+        } else if (src == buttonDisconnect) {
+            try {
+                messageSocketThread.getSocket().close();
+                panelBottom.setVisible(false);
+                panelTop.setVisible(true);
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
         } else {
             throw new RuntimeException("Unsupported action: " + src);
         }
@@ -132,23 +157,15 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         StackTraceElement[] ste = e.getStackTrace();
         String msg = String.format("Exception in \"%s\": %s %s%n\t %s",
                 t.getName(), e.getClass().getCanonicalName(), e.getMessage(), ste[0]);
+        showError(msg);
+    }
+
+    private void showError(String msg) {
         JOptionPane.showMessageDialog(this, msg, "Exception!", JOptionPane.ERROR_MESSAGE);
     }
 
     @Override
-    public void keyTyped(KeyEvent e) {
-
-    }
-
-    @Override
-    public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-            sendMessage();
-        }
-    }
-
-    @Override
-    public void keyReleased(KeyEvent e) {
-
+    public void onMessageReceived(String msg) {
+        putMessage("Server", msg);
     }
 }

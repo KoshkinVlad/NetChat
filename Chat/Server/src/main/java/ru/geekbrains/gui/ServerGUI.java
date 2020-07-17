@@ -1,4 +1,6 @@
-package ru.geekbrains.netchat;
+package ru.geekbrains.gui;
+
+import ru.geekbrains.core.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -16,6 +18,7 @@ public class ServerGUI extends JFrame implements ActionListener, Thread.Uncaught
     private final JButton buttonStart = new JButton("Start");
     private final JButton buttonStop = new JButton("Stop");
 
+    private static final int PORT = 8080;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
@@ -27,7 +30,7 @@ public class ServerGUI extends JFrame implements ActionListener, Thread.Uncaught
     }
 
 
-    ServerGUI () {
+    ServerGUI() {
         Thread.setDefaultUncaughtExceptionHandler(this);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setBounds(POS_X, POS_Y, WIDTH, HEIGHT);
@@ -49,7 +52,7 @@ public class ServerGUI extends JFrame implements ActionListener, Thread.Uncaught
     public void actionPerformed(ActionEvent e) {
         Object src = e.getSource();
         if (src == buttonStart) {
-            chatServer.start(8181);
+            chatServer.start(PORT);
         } else if (src == buttonStop) {
             chatServer.stop();
         } else {
@@ -61,14 +64,6 @@ public class ServerGUI extends JFrame implements ActionListener, Thread.Uncaught
     public void uncaughtException(Thread t, Throwable e) {
         e.printStackTrace();
         StackTraceElement[] ste = e.getStackTrace();
-        /*StringBuilder sb = new StringBuilder();
-        sb.append("Exception in \"")
-                .append(t.getName())
-                .append("\": ")
-                .append(e.getClass().getCanonicalName())
-                .append(" ")
-                .append(e.getMessage()) ... */
-
         String msg = String.format("Exception in \"%s\": %s %s%n\t %s",
                 t.getName(), e.getClass().getCanonicalName(), e.getMessage(), ste[0]);
         JOptionPane.showMessageDialog(this, msg, "Exception!", JOptionPane.ERROR_MESSAGE);
