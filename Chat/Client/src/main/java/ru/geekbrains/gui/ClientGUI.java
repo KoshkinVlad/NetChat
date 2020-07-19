@@ -4,15 +4,13 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.io.*;
 import java.net.Socket;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import ru.geekbrains.chat.common.MessageLibrary;
 import ru.geekbrains.network.*;
 
 public class ClientGUI extends JFrame implements ActionListener, Thread.UncaughtExceptionHandler, MessageSocketThreadListener {
@@ -27,8 +25,8 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     private final JTextField ipAddressField = new JTextField("127.0.0.1");
     private final JTextField portField = new JTextField("8080");
     private final JCheckBox cbAlwaysOnTop = new JCheckBox("Always on top", true);
-    private final JTextField loginField = new JTextField("login");
-    private final JPasswordField passwordField = new JPasswordField("123");
+    private final JTextField loginField = new JTextField("admin");
+    private final JPasswordField passwordField = new JPasswordField("admin");
     private final JButton buttonLogin = new JButton("Login");
 
     private final JPanel panelBottom = new JPanel(new BorderLayout());
@@ -84,14 +82,14 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         add(scrollPaneUsers, BorderLayout.EAST);
         add(panelTop, BorderLayout.NORTH);
         add(panelBottom, BorderLayout.SOUTH);
+        panelBottom.setVisible(false);
+        panelTop.setVisible(true);
 
         cbAlwaysOnTop.addActionListener(this);
         buttonSend.addActionListener(this);
         messageField.addActionListener(this);
         buttonLogin.addActionListener(this);
         buttonDisconnect.addActionListener(this);
-        panelBottom.setVisible(false);
-        panelTop.setVisible(true);
 
         setVisible(true);
     }
@@ -130,8 +128,6 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         } else if (src == buttonLogin) {
             try {
                 Socket socket = new Socket(ipAddressField.getText(), Integer.parseInt(portField.getText()));
-                panelTop.setVisible(false);
-                panelBottom.setVisible(true);
                 messageSocketThread = new MessageSocketThread(this, loginField.getText(), socket);
             } catch (UnknownHostException unknownHostException) {
                 showError(unknownHostException.getMessage());
@@ -139,13 +135,8 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
                 showError(ioException.getMessage());
             }
         } else if (src == buttonDisconnect) {
-            try {
-                messageSocketThread.getSocket().close();
-                panelBottom.setVisible(false);
-                panelTop.setVisible(true);
-            } catch (IOException ioException) {
-                ioException.printStackTrace();
-            }
+            messageSocketThread.close();
+
         } else {
             throw new RuntimeException("Unsupported action: " + src);
         }
@@ -167,5 +158,24 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     @Override
     public void onMessageReceived(String msg) {
         putMessage("Server", msg);
+    }
+
+    @Override
+    public void onException(Throwable throwable) {
+        showError(throwable.getMessage());
+        throwable.printStackTrace();
+    }
+
+    @Override
+    public void onSocketReady() {
+        panelTop.setVisible(false);
+        panelBottom.setVisible(true);
+        messageSocketThread.sendMessage(MessageLibrary.getAuthRequestMessage(loginField.getText(), new String(passwordField.getPassword())));
+    }
+
+    @Override
+    public void onSocketClosed() {
+        panelTop.setVisible(true);
+        panelBottom.setVisible(false);
     }
 }

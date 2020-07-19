@@ -1,44 +1,114 @@
 package ru.geekbrains.core;
 
+import ru.geekbrains.chat.common.MessageLibrary;
 import ru.geekbrains.network.*;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.net.Socket;
+import java.util.Vector;
 
 public class ChatServer implements SocketThreadListener, MessageSocketThreadListener {
 
     private ServerSocketThread serverSocketThread;
-    private MessageSocketThread socket;
+    private ClientSessionThread clientSession;
+    private ChatServerListener listener;
+    private AuthController authController;
+    private Vector<ClientSessionThread> clients = new Vector<>();
+
+    public ChatServer(ChatServerListener listener) {
+        this.listener = listener;
+    }
 
     public void start(int port) {
         if (serverSocketThread != null && serverSocketThread.isAlive()) {
             return;
         }
-        serverSocketThread = new ServerSocketThread(this, "Server Socket Thread", port);
+        serverSocketThread = new ServerSocketThread(this, "Server Socket Thread", port, 3000);
+        logMessage("Запускаю сервер на порту" + port);
         serverSocketThread.start();
+        authController = new AuthController();
+        authController.init();
     }
 
     public void stop() {
         if (serverSocketThread == null || !serverSocketThread.isAlive()) {
             return;
         }
-        System.out.println("Останавливаю чат сервер");
+        logMessage("Останавливаю чат сервер");
         serverSocketThread.interrupt();
     }
 
     @Override
     public void onClientConnected(Socket socket) {
-        this.socket.sendMessage(socket.getRemoteSocketAddress() + " подключился!");
     }
 
     public void onSocketReceived(Socket socket) {
-        this.socket = new MessageSocketThread(this, "ServerSocket", socket);
+        this.clientSession = new ClientSessionThread(this, "ClientSessionThread", socket);
+        clients.add(this.clientSession);
     }
 
     @Override
-    public void onMessageReceived(String msg) {
-        System.out.println(msg);
-        socket.sendMessage("echo: " + msg);
+    public void onMessageReceived(String message) {
+        if (clientSession.isAuthorized()) {
+            processAuthorizedUserMessage(message);
+        } else {
+            processUnAuthorizedUserMessage(message);
+        }
+
+    }
+
+    private void processAuthorizedUserMessage(String message) {
+        logMessage(message);
+        clientSession.sendMessage("echo: " + message);
+    }
+
+    private void processUnAuthorizedUserMessage(String message) {
+        String[] arr = message.split(MessageLibrary.DELIMITER);
+        if (arr[0].equals(MessageLibrary.TYPE_BROADCAST) && arr.length == 4) {
+            String broadMessage = arr[2] + " говорит всем: \"" + arr[3] + "\"";
+            for (int i = 0; i < clients.size(); i++) {
+                clients.get(i).sendMessage(broadMessage);
+            }
+        } else {
+            if (arr.length < 4 ||
+                    !arr[0].equals(MessageLibrary.AUTH_METHOD)
+                    || !arr[1].equals(MessageLibrary.AUTH_REQUEST)) {
+
+                //clientSession.authError("Bad request " + message);
+                clientSession.authError("Ошибка при входе в чат");
+                return;
+            }
+            String login = arr[2];
+            String password = arr[3];
+            String nickname = authController.getNickname(login, password);
+            if (nickname == null) {
+                clientSession.authDeny();
+                return;
+            }
+            // авторизиван
+            clientSession.authAccept(nickname);
+        }
+
+    }
+
+    @Override
+    public void onException(Throwable throwable) {
+        logMessage(throwable.getMessage());
+    }
+
+    @Override
+    public void onSocketReady() {
+        logMessage(clientSession.getSocket().getRemoteSocketAddress() + " подключился!");
+    }
+
+    @Override
+    public void onSocketClosed() {
+        logMessage(clientSession.getSocket().getRemoteSocketAddress() + " отключился!");
+    }
+
+    public void disconnectAll() {
+    }
+
+    private void logMessage(String message) {
+        listener.onChatServerMessage(message);
     }
 }
