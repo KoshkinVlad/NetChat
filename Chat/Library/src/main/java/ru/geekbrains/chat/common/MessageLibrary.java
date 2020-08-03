@@ -17,6 +17,7 @@ public class MessageLibrary {
     public static final String AUTH_DENIED = "denied";
     /* если мы вдруг не поняли, что за сообщение и не смогли разобрать */
     public static final String TYPE_BROADCAST = "/broadcast";
+    public static final String ALTER_NICKNAME = "/alter_nickname";
 
     /* то есть сообщение, которое будет посылаться всем */
     public static final String MSG_FORMAT_ERROR = "/msg_format_error";
@@ -27,6 +28,10 @@ public class MessageLibrary {
 
     public static String getAuthAcceptMessage(String nickname) {
         return AUTH_METHOD + DELIMITER + AUTH_ACCEPT + DELIMITER + nickname;
+    }
+
+    public static String alterNicknameMethod(String login, String newNickname) {
+        return ALTER_NICKNAME + DELIMITER + login + DELIMITER + newNickname;
     }
 
     public static String getAuthDeniedMessage() {

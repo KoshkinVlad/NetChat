@@ -33,6 +33,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     private final JButton buttonDisconnect = new JButton("<html><b>Disconnect</b></html>");
     private final JTextField messageField = new JTextField();
     private final JButton buttonSend = new JButton("Send");
+    private final JButton nickChange=new JButton("Сменить никнейм");
 
     private final JList<String> listUsers = new JList<String>();
 
@@ -77,6 +78,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         panelBottom.add(buttonDisconnect, BorderLayout.WEST);
         panelBottom.add(messageField, BorderLayout.CENTER);
         panelBottom.add(buttonSend, BorderLayout.EAST);
+        panelBottom.add(nickChange, BorderLayout.SOUTH);
 
         add(scrollPaneChatArea, BorderLayout.CENTER);
         add(scrollPaneUsers, BorderLayout.EAST);
@@ -90,6 +92,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         messageField.addActionListener(this);
         buttonLogin.addActionListener(this);
         buttonDisconnect.addActionListener(this);
+        nickChange.addActionListener(this);
 
         setVisible(true);
     }
@@ -97,6 +100,18 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     private void sendMessage(String name, String message) {
         if (!message.isEmpty()) {
             putMessage(name, message);
+            messageField.setText("");
+            messageField.grabFocus();
+            messageSocketThread.sendMessage(message);
+        }
+    }
+
+    // использую для служебных сообщений, если needToPut=false
+    private void sendMessage(String name, String message, boolean needToPut) {
+        if (!message.isEmpty()) {
+            if (needToPut) {
+                putMessage(name, message);
+            }
             messageField.setText("");
             messageField.grabFocus();
             messageSocketThread.sendMessage(message);
@@ -136,6 +151,16 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             }
         } else if (src == buttonDisconnect) {
             messageSocketThread.close();
+        } else if (src == nickChange) {
+            String newNickName = JOptionPane.showInputDialog(this,"Введите новый никнейм");
+/*
+        служебное сообщение о смене ника вида:
+        ALTER_NICKNAME + DELIMITER + login + DELIMITER + newNickname
+        Пример:
+        /alter_nickname##admin##wasadmin
+ */
+            String message=MessageLibrary.ALTER_NICKNAME + MessageLibrary.DELIMITER + loginField.getText() + MessageLibrary.DELIMITER + newNickName;
+            sendMessage(loginField.getText(), message, false);
 
         } else {
             throw new RuntimeException("Unsupported action: " + src);

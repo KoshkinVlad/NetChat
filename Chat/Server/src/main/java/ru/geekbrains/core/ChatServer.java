@@ -53,12 +53,18 @@ public class ChatServer implements SocketThreadListener, MessageSocketThreadList
         } else {
             processUnAuthorizedUserMessage(message);
         }
-
     }
 
     private void processAuthorizedUserMessage(String message) {
         logMessage(message);
-        clientSession.sendMessage("echo: " + message);
+        if (message.matches(MessageLibrary.ALTER_NICKNAME + MessageLibrary.DELIMITER + ".*")) {
+            String[] splited = message.split(MessageLibrary.DELIMITER);
+            authController.alterNickName(splited[1], splited[2]);
+            clientSession.sendMessage("служебное сообщение: пользователь " + splited[1] + " сменил свой никнейм. Теперь он " + splited[2]);
+        } else {
+            clientSession.sendMessage("echo: " + message);
+        }
+
     }
 
     private void processUnAuthorizedUserMessage(String message) {
