@@ -8,8 +8,10 @@ import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayDeque;
 import java.util.Date;
 
+import com.sun.jmx.remote.internal.ArrayQueue;
 import ru.geekbrains.chat.common.MessageLibrary;
 import ru.geekbrains.network.*;
 
@@ -33,7 +35,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     private final JButton buttonDisconnect = new JButton("<html><b>Disconnect</b></html>");
     private final JTextField messageField = new JTextField();
     private final JButton buttonSend = new JButton("Send");
-    private final JButton nickChange=new JButton("Сменить никнейм");
+    private final JButton nickChange = new JButton("Сменить никнейм");
 
     private final JList<String> listUsers = new JList<String>();
 
@@ -152,14 +154,14 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         } else if (src == buttonDisconnect) {
             messageSocketThread.close();
         } else if (src == nickChange) {
-            String newNickName = JOptionPane.showInputDialog(this,"Введите новый никнейм");
+            String newNickName = JOptionPane.showInputDialog(this, "Введите новый никнейм");
 /*
         служебное сообщение о смене ника вида:
         ALTER_NICKNAME + DELIMITER + login + DELIMITER + newNickname
         Пример:
         /alter_nickname##admin##wasadmin
  */
-            String message=MessageLibrary.ALTER_NICKNAME + MessageLibrary.DELIMITER + loginField.getText() + MessageLibrary.DELIMITER + newNickName;
+            String message = MessageLibrary.ALTER_NICKNAME + MessageLibrary.DELIMITER + loginField.getText() + MessageLibrary.DELIMITER + newNickName;
             sendMessage(loginField.getText(), message, false);
 
         } else {
@@ -196,11 +198,38 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         panelTop.setVisible(false);
         panelBottom.setVisible(true);
         messageSocketThread.sendMessage(MessageLibrary.getAuthRequestMessage(loginField.getText(), new String(passwordField.getPassword())));
+        // читаем 100 строк последние
+        fillHistory();
+
+    }
+
+    private void fillHistory() {
+        try (BufferedReader reader = new BufferedReader(new FileReader("messages.log"))) {
+            String s;
+            ArrayDeque<String> history=new ArrayDeque<>();
+            while ((s = reader.readLine()) != null) {
+                if (history.size()>=100) {
+                    history.pop();
+                }
+                history.addLast(s);
+            }
+            int i=0;
+            while (history.size()>0) {
+                chatArea.append(history.pop()+"\n");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void onSocketClosed() {
         panelTop.setVisible(true);
         panelBottom.setVisible(false);
+        clearHistory();
+    }
+
+    private void clearHistory() {
+        chatArea.setText("");
     }
 }
