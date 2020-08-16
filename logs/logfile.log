@@ -1,0 +1,11 @@
+INFO  2020-08-16 18:59:30 [JavaFX Application Thread] ru.geekbrains.core.ChatServer (ChatServer.java:34) - Запускаю сервер на порту8080
+INFO  2020-08-16 19:00:22 [JavaFX Application Thread] ru.geekbrains.core.ChatServer (ChatServer.java:46) - Останавливаю чат сервер
+INFO  2020-08-16 19:00:25 [JavaFX Application Thread] ru.geekbrains.core.ChatServer (ChatServer.java:34) - Запускаю сервер на порту8080
+INFO  2020-08-16 19:00:26 [JavaFX Application Thread] ru.geekbrains.core.ChatServer (ChatServer.java:46) - Останавливаю чат сервер
+INFO  2020-08-16 19:03:19 [JavaFX Application Thread] ru.geekbrains.core.ChatServer (ChatServer.java:124) - Запускаю сервер на порту8080
+INFO  2020-08-16 19:03:20 [ClientSessionThread] ru.geekbrains.core.ChatServer (ChatServer.java:124) - /127.0.0.1:54513 подключился!
+INFO  2020-08-16 19:03:23 [ClientSessionThread] ru.geekbrains.core.ChatServer (ChatServer.java:124) - /127.0.0.1:54513 отключился!
+INFO  2020-08-16 19:03:32 [ClientSessionThread] ru.geekbrains.core.ChatServer (ChatServer.java:124) - /127.0.0.1:54519 подключился!
+INFO  2020-08-16 19:03:35 [ClientSessionThread] ru.geekbrains.core.ChatServer (ChatServer.java:124) - ффф
+INFO  2020-08-16 19:03:44 [ClientSessionThread] ru.geekbrains.core.ChatServer (ChatServer.java:124) - /127.0.0.1:54519 отключился!
+INFO  2020-08-16 19:03:46 [JavaFX Application Thread] ru.geekbrains.core.ChatServer (ChatServer.java:124) - Останавливаю чат сервер

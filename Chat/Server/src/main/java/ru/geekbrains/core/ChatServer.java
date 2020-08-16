@@ -1,7 +1,12 @@
 package ru.geekbrains.core;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import ru.geekbrains.chat.common.MessageLibrary;
-import ru.geekbrains.network.*;
+import ru.geekbrains.network.MessageSocketThreadListener;
+import ru.geekbrains.network.ServerSocketThread;
+import ru.geekbrains.network.SocketThreadListener;
 
 import java.net.Socket;
 import java.util.Vector;
@@ -13,6 +18,7 @@ public class ChatServer implements SocketThreadListener, MessageSocketThreadList
     private ChatServerListener listener;
     private AuthController authController;
     private Vector<ClientSessionThread> clients = new Vector<>();
+    private static final Logger logger = LogManager.getLogger(ChatServer.class);
 
     public ChatServer(ChatServerListener listener) {
         this.listener = listener;
@@ -23,7 +29,7 @@ public class ChatServer implements SocketThreadListener, MessageSocketThreadList
             return;
         }
         serverSocketThread = new ServerSocketThread(this, "Server Socket Thread", port, 3000);
-        logMessage("Запускаю сервер на порту" + port);
+        logMessage("Запускаю сервер на порту " + port);
         serverSocketThread.start();
         authController = new AuthController();
         authController.init();
@@ -116,5 +122,9 @@ public class ChatServer implements SocketThreadListener, MessageSocketThreadList
 
     private void logMessage(String message) {
         listener.onChatServerMessage(message);
+        logger.info(message);   // а можно в метод передавать уровень логирования? я нашёл такое перечисление:
+//        Level level=Level.INFO;
+//        logger.atLevel(level);
+//        но не пойму, как работать с этим
     }
 }
